@@ -27,14 +27,16 @@ def parse(A):
 
 
 class Metal:
-    def __init__(self, name, oxi, pot):
+    def __init__(self, name, oxi, pot, massaMolar):
         self.name = name
         self.oxi = oxi
         self.pot = pot
+        self.massaMolar = massaMolar
+        self.eletrons = parse(self.oxi)
 
 
 class Pilha:
-    def __init__(self, metal1, metal2, Con1, Con2, temp, stack):
+    def __init__(self, metal1, metal2, Con1, Con2, temp, massa1, massa2, stack):
         self.stack = stack
         self.catodo = None
         self.anodo = None
@@ -45,10 +47,12 @@ class Pilha:
         self.ConCatodo = None
         self.ConAnodo = None
         self.temp = temp+273.15
-        self.massa = 1  # CONSERTAR
-        self.massa_sol = 0.001  # L
+        self.massaCloro = 35.453
+        self.massaEletrodos = massa1 + massa2  # Eletrodos
+        self.volumeSol = 0.001  # L
         IdxM1 = self.stack.index(metal1.name)
         IdxM2 = self.stack.index(metal2.name)
+
         if IdxM1 < IdxM2:
             self.catodo = metal2
             self.anodo = metal1
@@ -60,29 +64,25 @@ class Pilha:
             self.ConCatodo = Con1
             self.ConAnodo = Con2
 
-        print("Anodo:", self.anodo.name)
-        print("Catodo:", self.catodo.name)
+        self.massa = self.CalcMassaDaSolucao() + self.massaEletrodos
         self.reativos = {self.anodo.name, self.catodo.oxi}
         self.produtos = {self.anodo.oxi, self.catodo.name}
-        print("Reagentes:", self.reativos)
-        print("Produtos:", self.produtos)
 
         if(self.catodo.name != self.anodo.name):
             self.balance = self.Balance()
 
         self.DDP()
 
-        self.carga = self.Carga()
-        print("Carga: ", self.carga)
         self.capacidadeDeCarga = self.CalcCapacidadeDeCarga()
         self.densidadeDeCarga = self.CalcDensidadeDeCarga()
         self.densidadeDeEnergia = self.CalcDensidadeDeEnergia()
 
+        self.custo = self.Custo()
+
     def DDP(self):
         Const = (8.314*self.temp)/96500
         Eo = self.catodo.pot - self.anodo.pot
-        print("DDP Teorica: ", Eo)
-        n = mmc(parse(self.anodo.oxi), parse(self.catodo.oxi))
+        n = mmc(self.anodo.eletrons, self.catodo.eletrons)
         if(self.anodo.name != self.catodo.name):
             anodo_exp = int(self.balance[1][self.anodo.oxi])
             catodo_exp = int(self.balance[1][self.catodo.name])
@@ -103,59 +103,100 @@ class Pilha:
             log = np.log(menorC/maiorC)
 
         self.ddp = Eo-(Const/n)*log
-        print("DDP REAL: ", self.ddp)
 
-    def Carga(self):
+    def CalcCapacidadeDeCarga(self):
 
-        elec = mmc(parse(self.anodo.oxi), parse(self.catodo.oxi))
+        elec = mmc(self.anodo.eletrons, self.catodo.eletrons)
         const = 9.65e4
         columb = const * elec
         Ah = columb/3600
 
-        return Ah
-
-    def CalcCapacidadeDeCarga(self):
         return 0
 
     def CalcDensidadeDeCarga(self):
-        return self.carga / self.massa
+        return self.capacidadeDeCarga / self.massa
 
     def CalcDensidadeDeEnergia(self):
         return self.densidadeDeCarga * self.ddp
 
     def Custo(self):
-        pass
+        return 0
 
     def Balance(self):
         reag, prod = balance_stoichiometry(self.reativos, self.produtos)
         return reag, prod
 
+    def CalcMassaDaSolucao(self):
+        m1 = self.volumeSol * self.ConAnodo * \
+            (self.anodo.massaMolar + self.massaCloro * self.anodo.eletrons)
+        m2 = self.volumeSol * self.ConCatodo * \
+            (self.catodo.massaMolar + self.massaCloro * self.anodo.eletrons)
+        return m1 + m2
 
-Zn = Metal('Zn', 'Zn+2', -0.76)
-Cu = Metal('Cu', 'Cu+2', 0.34)
-Pb = Metal('Pb', 'Pb+2', -0.13)
-stack = ['Zn', 'Cr', 'Ni', 'Pb', 'Cu']
-dic = {'Zn': Zn, 'Cu': Cu, 'Pb': Pb}
-#p1 = Pilha(Cu, Zn, 2, 2, 25, stack)
+
+def EscolhePilha(ddp, pot, temp):
+    return 0
+
+
+Li = Metal('Li', 'Li+', -3.04, 6.941)
+K = Metal('K', 'K+', -2.92, 39.0983)
+Ba = Metal('Ba', 'Ba+2', -2.9, 137.327)
+Sr = Metal('Sr', 'Sr+2', -2.89, 87.62)
+Ca = Metal('Ca', 'Ca+2', -2.87, 40.078)
+Zn = Metal('Zn', 'Zn+2', -0.76, 65.38)
+Cr = Metal('Cr', 'Cr+3', -0.74, 51.9961)
+Fe = Metal('Fe', 'Fe+2', -0.44, 137.327)
+Ni = Metal('Ni', 'Ni+2', -0.23, 58.6934)
+Pb = Metal('Pb', 'Pb+2', -0.13, 207.2)
+Cu = Metal('Cu', 'Cu+2', 0.34, 63.546)
+
+stack = ['Li', 'K', 'Ba', 'Sr', 'Ca', 'Zn', 'Cr', 'Fe', 'Ni', 'Pb', 'Cu']
+metais = {'Li': Li, 'K': K, 'Ba': Ba, 'Sr': Sr, 'Ca': Ca, 'Zn': Zn,
+          'Cr': Cr, 'Fe': Fe, 'Ni': Ni, 'Pb': Pb, 'Cu': Cu}
 
 
 def main():
-    print("----- Nisbe -----")
+    print("---------- Projeto Pilha ----------")
+    print("")
     selection = int(input(
         "Deseja escolher uma pilha [0] ou saber as propriedades de uma pilha [1]? "))
     if selection == 1:
-        metal1_name = input("Escolha o primeiro metal [Zn, Cr, Ni, Pb, Cu]: ")
-        metal1 = dic[metal1_name]
-        con_metal1 = int(input("Qual a concentracao do primeiro metal? "))
-        metal2_name = input("Escolha o segundo metal [Zn, Cr, Ni, Pb, Cu]: ")
-        metal2 = dic[metal2_name]
-        con_metal2 = int(input("Qual a concentracao do segundo metal? "))
-        temperatura = int(input("Qual a temperatura de operacao? "))
+        metal1_name = input(
+            "Escolha o primeiro metal ['Li', 'K', 'Ba', 'Sr', 'Ca', 'Zn', 'Cr', 'Fe', 'Ni', 'Pb', 'Cu']: ")
+        metal1 = metais[metal1_name]
+        con_metal1 = int(
+            input("Qual a concentracao do primeiro metal em mol/L? "))
+        massa1 = int(input("Qual a massa do primeiro eletrodo em Kg? "))
+        metal2_name = input(
+            "Escolha o segundo metal ['Li', 'K', 'Ba', 'Sr', 'Ca', 'Zn', 'Cr', 'Fe', 'Ni', 'Pb', 'Cu']: ")
+        metal2 = metais[metal2_name]
+        con_metal2 = int(
+            input("Qual a concentracao do segundo metal em mol/L? "))
+        massa2 = int(input("Qual a massa do segundo eletrodo em Kg? "))
+        temperatura = int(
+            input("Qual a temperatura de operacao em graus celsius? "))
+        print("")
+
+        print("---------- Detalhes da Pilha ----------")
+        print("")
         pilha = Pilha(metal1, metal2, con_metal1,
-                      con_metal2, temperatura, stack)
+                      con_metal2, temperatura, massa1, massa2, stack)
+        print("Anodo:", pilha.anodo.name)
+        print("Catodo:", pilha.catodo.name)
+        print("Reagentes:", pilha.reativos)
+        print("Produtos:", pilha.produtos)
+        print("DDP: ", pilha.ddp)
+        print("Corrente Maxima: ", pilha.maxA)
+        print("Capacidade de Carga: ", pilha.capacidadeDeCarga)
+        print("Densidade de Carga: ", pilha.densidadeDeCarga)
+        print("Densidade de Energia: ", pilha.densidadeDeEnergia)
+        print("Custo: ", pilha.custo)
 
     elif selection == 0:
-        print("WORK IN PROGRESS")
+        ddp = int(input("Qual a ddp desejada em V? "))
+        pot = int(input("Qual a potencia desejada? "))
+        temp = int(input("Quanto tempo em horas deve ficar ligado? "))
+        pilha = EscolhePilha(ddp, pot, temp)
 
 
 main()
