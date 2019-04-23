@@ -46,6 +46,7 @@ class Pilha:
         self.ConAnodo = None
         self.temp = temp+273.15
         self.massa = 1  # CONSERTAR
+        self.massa_sol = 0.001  # L
         IdxM1 = self.stack.index(metal1.name)
         IdxM2 = self.stack.index(metal2.name)
         if IdxM1 < IdxM2:
@@ -134,4 +135,27 @@ Zn = Metal('Zn', 'Zn+2', -0.76)
 Cu = Metal('Cu', 'Cu+2', 0.34)
 Pb = Metal('Pb', 'Pb+2', -0.13)
 stack = ['Zn', 'Cr', 'Ni', 'Pb', 'Cu']
-p1 = Pilha(Cu, Zn, 2, 2, 25, stack)
+dic = {'Zn': Zn, 'Cu': Cu, 'Pb': Pb}
+#p1 = Pilha(Cu, Zn, 2, 2, 25, stack)
+
+
+def main():
+    print("----- Nisbe -----")
+    selection = int(input(
+        "Deseja escolher uma pilha [0] ou saber as propriedades de uma pilha [1]? "))
+    if selection == 1:
+        metal1_name = input("Escolha o primeiro metal [Zn, Cr, Ni, Pb, Cu]: ")
+        metal1 = dic[metal1_name]
+        con_metal1 = int(input("Qual a concentracao do primeiro metal? "))
+        metal2_name = input("Escolha o segundo metal [Zn, Cr, Ni, Pb, Cu]: ")
+        metal2 = dic[metal2_name]
+        con_metal2 = int(input("Qual a concentracao do segundo metal? "))
+        temperatura = int(input("Qual a temperatura de operacao? "))
+        pilha = Pilha(metal1, metal2, con_metal1,
+                      con_metal2, temperatura, stack)
+
+    elif selection == 0:
+        print("WORK IN PROGRESS")
+
+
+main()
